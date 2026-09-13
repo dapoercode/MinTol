@@ -762,7 +762,9 @@
                 <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Total Tagihan</p>
                 <p class="text-3xl font-black text-emerald-700" x-text="formatRupiah(totalPrice())"></p>
             </div>
-            <div class="w-48 h-48 bg-slate-100 rounded-2xl mb-6 flex items-center justify-center border-2 border-dashed border-slate-300"><i class="ph-light ph-qr-code text-8xl text-slate-300"></i></div>
+            <div class="w-48 h-48 bg-white rounded-2xl mb-6 flex items-center justify-center border-2 border-slate-200 overflow-hidden shadow-sm">
+                <img src="https://lh3.googleusercontent.com/d/1SesjUKsq6Ik-uwENsLi8-zKN5O5goa0G" alt="QRIS" class="w-full h-full object-contain">
+            </div>
             <button @click="confirmQrisPayment()" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">Pembayaran Selesai</button>
         </div>
 
