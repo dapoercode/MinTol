@@ -153,17 +153,24 @@
                     </div>
                 </div>
 
-                <!-- Produk Terlaris -->
+                <!-- Produk Terlaris dengan Filter Waktu Sendiri -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
                             <i class="ph-bold ph-trophy text-amber-500 text-base"></i> Produk Terlaris
                         </h3>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Berdasarkan Stok Tersedia</span>
+                        <div>
+                            <select x-model="topProductFilter" class="bg-slate-100 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 focus:outline-none border border-slate-200 cursor-pointer">
+                                <option value="semua">Semua</option>
+                                <option value="hari">Hari Ini</option>
+                                <option value="minggu">Minggu Ini</option>
+                                <option value="bulan">Bulan Ini</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="space-y-2.5">
-                        <template x-for="(prod, index) in getTopProducts()" :key="prod.id">
+                        <template x-for="(prod, index) in getTopProductsBySales()" :key="prod.id">
                             <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
                                 <div class="flex items-center gap-3">
                                     <div class="w-7 h-7 rounded-lg font-black text-xs flex items-center justify-center"
@@ -179,11 +186,11 @@
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <span class="text-xs font-black bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700 shadow-sm" x-text="'Stok: ' + prod.stock"></span>
+                                    <span class="text-xs font-black bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100 shadow-sm" x-text="'Terjual: ' + prod.soldCount"></span>
                                 </div>
                             </div>
                         </template>
-                        <div x-show="products.length === 0" class="text-center py-4 text-xs text-slate-400">Belum ada data produk</div>
+                        <div x-show="getTopProductsBySales().length === 0" class="text-center py-4 text-xs text-slate-400">Belum ada data penjualan pada periode ini</div>
                     </div>
                 </div>
 
@@ -707,7 +714,7 @@
             </div>
 
             <div class="mb-6">
-                <label class="text-xs font-bold text-slate-600 mb-2 block">Penyesuaian Stok</label>
+                <label class="text-xs font-bold text-slate-600 mb-1 block">Penyesuaian Stok</label>
                 <div class="flex items-center gap-2 w-full">
                     <button @click="stockAdjustment = (parseInt(stockAdjustment) || 0) - 1" class="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black text-2xl shadow-md active:scale-95 transition-transform shrink-0">
                         <i class="ph-bold ph-minus"></i>
@@ -855,6 +862,7 @@
                 loginForm: { username: '', password: '' },
                 activeTab: 'dashboard',
                 dashboardFilter: 'semua',
+                topProductFilter: 'semua',
                 
                 // Masukkan URL Web App Google Apps Script Anda di bawah ini
                 API_URL: 'https://script.google.com/macros/s/AKfycbwjPQlLEP8aiumb7W3ys6Iur8LhdvBr33Q9lymNCzxRisEehFFfr98XXq7_YDjaVrTwlA/exec',
@@ -904,7 +912,11 @@
                 kasForm: { date: new Date().toISOString().split('T')[0], category: '', newCategoryInput: '', amountDisplay: '', note: '', receiptImage: null },
                 incomeCategories: ['Penjualan POS', 'Modal Awal'],
                 expenseCategories: ['Bahan Baku', 'Operasional'],
+                
                 kasHistory: [],
+                transactionDetails: [], // Menyimpan rincian items dari setiap transaksi
+                users: [], // Menyimpan data login dari spreadsheet
+
                 isKasDetailOpen: false,
                 selectedKasTrx: null,
                 confirmDeleteKas: false,
@@ -921,9 +933,9 @@
                 },
 
                 async handleLogin() {
-                    const u = this.loginForm.username.trim();
-                    const p = this.loginForm.password.trim();
-                    if(!u || !p) return this.showToast('Username dan Password wajib diisi!', 'error');
+                    const u_input = this.loginForm.username.trim();
+                    const p_input = this.loginForm.password.trim();
+                    if(!u_input || !p_input) return this.showToast('Username dan Password wajib diisi!', 'error');
 
                     this.isSyncing = true;
                     try {
@@ -933,15 +945,19 @@
                             this.products = result.products || [];
                             this.customers = result.customers || [];
                             this.kasHistory = result.cashHistory || [];
+                            this.transactionDetails = result.transactionDetails || [];
+                            this.users = result.users || [];
+                            
                             if (result.settings && result.settings.name) {
                                 this.storeProfile = result.settings;
                             }
                             
-                            // Validasi kredensial (Username dan Password langsung dari Google Sheet settings atau default mintol)
-                            const sheetUsername = result.auth?.username || 'mintol';
-                            const sheetPassword = result.auth?.password || 'mintol123';
+                            // Validasi dinamis dengan mencari di array Users
+                            const matchedUser = this.users.find(u => 
+                                String(u.username) === String(u_input) && String(u.password) === String(p_input)
+                            );
 
-                            if (u === sheetUsername && p === sheetPassword) {
+                            if (matchedUser) {
                                 this.isLoggedIn = true;
                                 localStorage.setItem('mintol_logged_in', 'true');
                                 this.showToast('Login berhasil!');
@@ -950,8 +966,8 @@
                             }
                         }
                     } catch (e) {
-                        // Offline login fallback jika sudah pernah login sebelumnya atau validasi offline
-                        if (u === 'mintol' && p === 'mintol123') {
+                        // Offline fallback sederhana
+                        if (u_input === 'mintol' && p_input === 'mintol123') {
                             this.isLoggedIn = true;
                             localStorage.setItem('mintol_logged_in', 'true');
                             this.showToast('Login Offline berhasil!');
@@ -980,6 +996,8 @@
                             this.products = result.products || [];
                             this.customers = result.customers || [];
                             this.kasHistory = result.cashHistory || [];
+                            this.transactionDetails = result.transactionDetails || [];
+                            this.users = result.users || [];
                             if (result.settings && result.settings.name) {
                                 this.storeProfile = result.settings;
                             }
@@ -1010,25 +1028,25 @@
                     setTimeout(() => { this.toast.show = false; }, 3000);
                 },
 
-                isDateInFilter(dateStr) {
+                isDateInFilter(dateStr, filterType) {
                     if (!dateStr) return false;
                     const d = new Date(dateStr);
                     const now = new Date();
                     
-                    if (this.dashboardFilter === 'semua') return true;
+                    if (filterType === 'semua') return true;
                     
-                    if (this.dashboardFilter === 'hari') {
+                    if (filterType === 'hari') {
                         return d.toDateString() === now.toDateString();
                     }
                     
-                    if (this.dashboardFilter === 'minggu') {
+                    if (filterType === 'minggu') {
                         const startOfWeek = new Date(now);
                         startOfWeek.setDate(now.getDate() - now.getDay());
                         startOfWeek.setHours(0,0,0,0);
                         return d >= startOfWeek && d <= now;
                     }
                     
-                    if (this.dashboardFilter === 'bulan') {
+                    if (filterType === 'bulan') {
                         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                     }
                     
@@ -1037,17 +1055,21 @@
 
                 getFilteredOmset() {
                     return this.kasHistory
-                        .filter(t => this.isDateInFilter(t.date) && t.type === 'pemasukan')
+                        .filter(t => this.isDateInFilter(t.date, this.dashboardFilter) && t.type === 'pemasukan')
                         .reduce((acc, curr) => acc + curr.amount, 0);
                 },
                 getFilteredSoldItemsCount() {
-                    return this.kasHistory
-                        .filter(t => this.isDateInFilter(t.date) && t.type === 'pemasukan' && t.category.includes('POS'))
-                        .length * 2;
+                    let total = 0;
+                    this.transactionDetails.forEach(detail => {
+                        if (this.isDateInFilter(detail.date, this.dashboardFilter)) {
+                            total += (parseInt(detail.quantity) || 0);
+                        }
+                    });
+                    return total;
                 },
                 getFilteredKasByType(type) {
                     return this.kasHistory
-                        .filter(t => this.isDateInFilter(t.date) && t.type === type)
+                        .filter(t => this.isDateInFilter(t.date, this.dashboardFilter) && t.type === type)
                         .reduce((acc, curr) => acc + curr.amount, 0);
                 },
                 getGlobalSaldo() {
@@ -1060,8 +1082,29 @@
                     return totalPemasukan - totalPengeluaran;
                 },
 
-                getTopProducts() {
-                    return [...this.products].sort((a, b) => b.stock - a.stock).slice(0, 3);
+                getTopProductsBySales() {
+                    // Hitung jumlah terjual berdasarkan transactionDetails sheet
+                    let salesMap = {};
+                    this.transactionDetails.forEach(detail => {
+                        if (this.isDateInFilter(detail.date, this.topProductFilter)) {
+                            if (!salesMap[detail.productId]) {
+                                salesMap[detail.productId] = 0;
+                            }
+                            salesMap[detail.productId] += (parseInt(detail.quantity) || 0);
+                        }
+                    });
+
+                    // Gabungkan dengan data produk
+                    let ranked = this.products.map(prod => {
+                        return {
+                            ...prod,
+                            soldCount: salesMap[prod.id] || 0
+                        };
+                    });
+
+                    // Urutkan dari terjual terbanyak
+                    ranked.sort((a, b) => b.soldCount - a.soldCount);
+                    return ranked.slice(0, 3);
                 },
 
                 filteredProducts() {
@@ -1126,6 +1169,7 @@
                 async finalizeTransaction() {
                     const trxId = 'TRX' + Math.floor(100000 + Math.random() * 900000);
                     const nowStr = new Date().toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', year: '2-digit'}) + ', ' + new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'});
+                    const sysDate = new Date().toISOString().split('T')[0];
                     
                     this.currentReceipt = {
                         id: trxId,
@@ -1137,11 +1181,6 @@
                         paymentMethod: this.paymentMethod.toUpperCase()
                     };
 
-                    this.cart.forEach(cartItem => {
-                        const targetProd = this.products.find(p => p.id === cartItem.id);
-                        if(targetProd) targetProd.stock -= cartItem.quantity;
-                    });
-
                     const typeTrx = this.paymentMethod === 'piutang' ? 'piutang' : 'pemasukan';
                     const catTrx = this.paymentMethod === 'piutang' ? 'Piutang POS' : 'Penjualan POS';
                     const noteTrx = (this.paymentMethod === 'piutang' ? 'Belum lunas - ' : 'POS ') + '(' + (this.selectedCustomer ? this.selectedCustomer.name : 'Guest') + ')';
@@ -1149,13 +1188,30 @@
                     const newTrx = {
                         trxId: 'T' + Date.now(),
                         type: typeTrx,
-                        date: new Date().toISOString().split('T')[0],
+                        date: sysDate,
                         category: catTrx,
                         amount: this.totalPrice(),
                         note: noteTrx,
                         items: [...this.cart]
                     };
 
+                    // 1. Kurangi stok lokal
+                    this.cart.forEach(cartItem => {
+                        const targetProd = this.products.find(p => p.id === cartItem.id);
+                        if(targetProd) targetProd.stock -= cartItem.quantity;
+                        
+                        // 2. Tambah relasi ke state local transactionDetails
+                        this.transactionDetails.push({
+                            trxId: newTrx.trxId,
+                            date: newTrx.date,
+                            productId: cartItem.id,
+                            productName: cartItem.name,
+                            quantity: cartItem.quantity,
+                            price: cartItem.price
+                        });
+                    });
+
+                    // 3. Tambah ke kasHistory
                     this.kasHistory.unshift({
                         id: newTrx.trxId,
                         type: newTrx.type,
@@ -1374,7 +1430,11 @@
                     }
                 },
                 async deleteKasOnline() {
+                    // Hapus lokal CashFlow
                     this.kasHistory = this.kasHistory.filter(t => t.id !== this.selectedKasTrx.id);
+                    // Hapus lokal detail transaksi agar dashboard ikut sinkron
+                    this.transactionDetails = this.transactionDetails.filter(d => d.trxId !== this.selectedKasTrx.id);
+                    
                     this.isKasDetailOpen = false;
                     this.confirmDeleteKas = false;
                     this.showToast('Transaksi dihapus');
