@@ -45,11 +45,11 @@
                 <div class="space-y-4">
                     <div>
                         <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Username</label>
-                        <input type="text" x-model="loginForm.username" placeholder="Contoh: mintol" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+                        <input type="text" x-model="loginForm.username" placeholder="Username" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
                     </div>
                     <div>
                         <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider ml-1">Password</label>
-                        <input type="password" x-model="loginForm.password" @keyup.enter="handleLogin()" placeholder="Contoh: mintol123" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+                        <input type="password" x-model="loginForm.password" @keyup.enter="handleLogin()" placeholder="Password" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
                     </div>
 
                     <button @click="handleLogin()" class="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 active:bg-emerald-700 transition-all flex justify-center items-center gap-2 mt-2">
