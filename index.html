@@ -88,7 +88,7 @@
             
             <div x-show="activeTab === 'dashboard'" class="p-4 flex flex-col space-y-4 pb-20">
                 
-                <!-- Kartu Sambutan & Ringkasan Cepat -->
+                <!-- Kartu Sambutan & Ringkasan Cepat dengan Filter Waktu -->
                 <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-5 rounded-3xl shadow-lg relative overflow-hidden">
                     <div class="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
                     <div class="flex justify-between items-start mb-4">
@@ -96,25 +96,29 @@
                             <p class="text-xs font-medium text-emerald-100 uppercase tracking-wider">Halo, Pemilik Toko</p>
                             <h2 class="text-xl font-black mt-0.5" x-text="storeProfile.name">MinTol</h2>
                         </div>
-                        <div class="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
-                            <i class="ph-bold ph-calendar-blank"></i>
-                            <span x-text="new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})"></span>
+                        <div class="relative">
+                            <select x-model="dashboardFilter" class="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold text-white focus:outline-none border border-white/30 cursor-pointer">
+                                <option value="hari" class="text-slate-800">Hari Ini</option>
+                                <option value="minggu" class="text-slate-800">Minggu Ini</option>
+                                <option value="bulan" class="text-slate-800">Bulan Ini</option>
+                                <option value="semua" class="text-slate-800">Semua</option>
+                            </select>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-white/15">
                         <div class="bg-black/10 backdrop-blur-sm p-3 rounded-2xl">
-                            <p class="text-[10px] uppercase font-bold text-emerald-200">Omset Hari Ini</p>
-                            <p class="text-lg font-black mt-1" x-text="formatRupiah(getTodayOmset())"></p>
+                            <p class="text-[10px] uppercase font-bold text-emerald-200">Total Omset</p>
+                            <p class="text-lg font-black mt-1" x-text="formatRupiah(getFilteredOmset())"></p>
                         </div>
                         <div class="bg-black/10 backdrop-blur-sm p-3 rounded-2xl">
                             <p class="text-[10px] uppercase font-bold text-emerald-200">Produk Terjual</p>
-                            <p class="text-lg font-black mt-1"><span x-text="getTodaySoldItemsCount()"></span> <span class="text-xs font-normal">item</span></p>
+                            <p class="text-lg font-black mt-1"><span x-text="getFilteredSoldItemsCount()"></span> <span class="text-xs font-normal">item</span></p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Statistik Tambahan (Ringkasan Keuangan) -->
+                <!-- Statistik Tambahan (Ringkasan Keuangan Sesuai Filter) -->
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl shrink-0">
@@ -122,7 +126,7 @@
                         </div>
                         <div>
                             <p class="text-[10px] font-bold text-slate-400 uppercase">Pemasukan Kas</p>
-                            <p class="text-sm font-black text-slate-800" x-text="formatRupiah(getTotalKasByType('pemasukan'))"></p>
+                            <p class="text-sm font-black text-slate-800" x-text="formatRupiah(getFilteredKasByType('pemasukan'))"></p>
                         </div>
                     </div>
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
@@ -131,7 +135,7 @@
                         </div>
                         <div>
                             <p class="text-[10px] font-bold text-slate-400 uppercase">Pengeluaran</p>
-                            <p class="text-sm font-black text-slate-800" x-text="formatRupiah(getTotalKasByType('pengeluaran'))"></p>
+                            <p class="text-sm font-black text-slate-800" x-text="formatRupiah(getFilteredKasByType('pengeluaran'))"></p>
                         </div>
                     </div>
                 </div>
@@ -837,6 +841,7 @@
                 isLoggedIn: false,
                 loginForm: { username: '', password: '' },
                 activeTab: 'dashboard',
+                dashboardFilter: 'hari',
                 
                 // Masukkan URL Web App Google Apps Script Anda di bawah ini
                 API_URL: 'https://script.google.com/macros/s/AKfycbwjPQlLEP8aiumb7W3ys6Iur8LhdvBr33Q9lymNCzxRisEehFFfr98XXq7_YDjaVrTwlA/exec',
@@ -992,24 +997,47 @@
                     setTimeout(() => { this.toast.show = false; }, 3000);
                 },
 
-                getTodayOmset() {
-                    const todayStr = new Date().toISOString().split('T')[0];
+                isDateInFilter(dateStr) {
+                    if (!dateStr) return false;
+                    const d = new Date(dateStr);
+                    const now = new Date();
+                    
+                    if (this.dashboardFilter === 'semua') return true;
+                    
+                    if (this.dashboardFilter === 'hari') {
+                        return d.toDateString() === now.toDateString();
+                    }
+                    
+                    if (this.dashboardFilter === 'minggu') {
+                        const startOfWeek = new Date(now);
+                        startOfWeek.setDate(now.getDate() - now.getDay());
+                        startOfWeek.setHours(0,0,0,0);
+                        return d >= startOfWeek && d <= now;
+                    }
+                    
+                    if (this.dashboardFilter === 'bulan') {
+                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    }
+                    
+                    return true;
+                },
+
+                getFilteredOmset() {
                     return this.kasHistory
-                        .filter(t => t.date === todayStr && t.type === 'pemasukan')
+                        .filter(t => this.isDateInFilter(t.date) && t.type === 'pemasukan')
                         .reduce((acc, curr) => acc + curr.amount, 0);
                 },
-                getTodaySoldItemsCount() {
-                    const todayStr = new Date().toISOString().split('T')[0];
+                getFilteredSoldItemsCount() {
                     return this.kasHistory
-                        .filter(t => t.date === todayStr && t.type === 'pemasukan' && t.category.includes('POS'))
+                        .filter(t => this.isDateInFilter(t.date) && t.type === 'pemasukan' && t.category.includes('POS'))
                         .length * 2;
                 },
-                getTotalKasByType(type) {
-                    const todayStr = new Date().toISOString().split('T')[0];
+                getFilteredKasByType(type) {
                     return this.kasHistory
-                        .filter(t => t.date === todayStr && t.type === type)
+                        .filter(t => this.isDateInFilter(t.date) && t.type === type)
                         .reduce((acc, curr) => acc + curr.amount, 0);
                 },
+
                 getTopProducts() {
                     return [...this.products].sort((a, b) => b.stock - a.stock).slice(0, 3);
                 },
