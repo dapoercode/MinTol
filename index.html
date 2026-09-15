@@ -690,9 +690,17 @@
             </div>
 
             <div class="mb-6">
-                <label class="text-xs font-bold text-slate-600 mb-1 block">Penyesuaian Stok (Bisa + atau -)</label>
-                <input type="number" x-model="stockAdjustment" placeholder="Contoh: 10 atau -5" class="w-full bg-white border-2 border-emerald-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:border-emerald-500">
-                <p class="text-[10px] text-slate-400 mt-1 ml-1">Ketik minus (-) jika barang rusak/hilang.</p>
+                <label class="text-xs font-bold text-slate-600 mb-2 block">Penyesuaian Stok</label>
+                <div class="flex items-center gap-2 w-full">
+                    <button @click="stockAdjustment = (parseInt(stockAdjustment) || 0) - 1" class="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black text-2xl shadow-md active:scale-95 transition-transform shrink-0">
+                        <i class="ph-bold ph-minus"></i>
+                    </button>
+                    <input type="number" x-model="stockAdjustment" placeholder="0" class="flex-1 min-w-0 bg-white border-2 border-emerald-500 rounded-2xl h-14 px-3 text-center text-2xl font-black text-slate-800 focus:outline-none">
+                    <button @click="stockAdjustment = (parseInt(stockAdjustment) || 0) + 1" class="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black text-2xl shadow-md active:scale-95 transition-transform shrink-0">
+                        <i class="ph-bold ph-plus"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2 ml-1">Gunakan tombol atau ketik langsung. Ketik minus (-) jika barang rusak/hilang.</p>
             </div>
 
             <div class="flex gap-2">
@@ -763,7 +771,7 @@
                 <p class="text-3xl font-black text-emerald-700" x-text="formatRupiah(totalPrice())"></p>
             </div>
             <div class="w-48 h-48 bg-white rounded-2xl mb-6 flex items-center justify-center border-2 border-slate-200 overflow-hidden shadow-sm">
-                <img src="https://lh3.googleusercontent.com/d/1SesjUKsq6Ik-uwENsLi8-zKN5O5goa0G" alt="QRIS" class="w-full h-full object-contain">
+                <img src="https://lh3.googleusercontent.com/d/10GQ_bD1RQjvFxtMRMQh8c6VtmI6xK68p" alt="QRIS" class="w-full h-full object-contain">
             </div>
             <button @click="confirmQrisPayment()" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">Pembayaran Selesai</button>
         </div>
@@ -872,7 +880,7 @@
                 
                 isStockModalOpen: false,
                 selectedStockProduct: null,
-                stockAdjustment: '',
+                stockAdjustment: 0,
 
                 activeKasTab: 'pengeluaran',
                 kasForm: { date: new Date().toISOString().split('T')[0], category: '', newCategoryInput: '', amountDisplay: '', note: '', receiptImage: null },
@@ -1238,7 +1246,7 @@
 
                 openStockModal(p) {
                     this.selectedStockProduct = p;
-                    this.stockAdjustment = '';
+                    this.stockAdjustment = 0;
                     this.isStockModalOpen = true;
                 },
                 async saveStockOnline() {
