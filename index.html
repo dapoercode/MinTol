@@ -974,9 +974,9 @@
                         const response = await fetch(this.API_URL + '?action=getData');
                         const result = await response.json();
                         if (result.status === 'success') {
-                            this.products = result.products || [];
+                            this.products = (result.products || []).map(p => ({ ...p, image: this.formatDriveImageUrl(p.image) }));
                             this.customers = result.customers || [];
-                            this.kasHistory = result.cashHistory || [];
+                            this.kasHistory = (result.cashHistory || []).map(c => ({ ...c, receiptUrl: this.formatDriveImageUrl(c.receiptUrl) }));
                             if (result.settings && result.settings.name) {
                                 this.storeProfile = result.settings;
                             }
@@ -1021,9 +1021,9 @@
                         const response = await fetch(this.API_URL + '?action=getData');
                         const result = await response.json();
                         if (result.status === 'success') {
-                            this.products = result.products || [];
+                            this.products = (result.products || []).map(p => ({ ...p, image: this.formatDriveImageUrl(p.image) }));
                             this.customers = result.customers || [];
-                            this.kasHistory = result.cashHistory || [];
+                            this.kasHistory = (result.cashHistory || []).map(c => ({ ...c, receiptUrl: this.formatDriveImageUrl(c.receiptUrl) }));
                             if (result.settings && result.settings.name) {
                                 this.storeProfile = result.settings;
                             }
@@ -1063,6 +1063,24 @@
                     if (trx.paymentMethod) return trx.paymentMethod.toUpperCase();
                     if (trx.category && trx.category.toUpperCase().includes('QRIS')) return 'QRIS';
                     return 'CASH';
+                },
+                formatDriveImageUrl(url) {
+                    if (!url || typeof url !== 'string') return '';
+                    if (url.startsWith('data:')) return url;
+                    if (url.includes('lh3.googleusercontent.com/d/')) return url;
+                    
+                    let fileId = '';
+                    if (url.includes('/d/')) {
+                        const parts = url.split('/d/');
+                        if (parts[1]) fileId = parts[1].split('/')[0].split('?')[0];
+                    } else if (url.includes('id=')) {
+                        fileId = url.split('id=')[1].split('&')[0];
+                    }
+                    
+                    if (fileId) {
+                        return 'https://lh3.googleusercontent.com/d/' + fileId;
+                    }
+                    return url;
                 },
                 formatInputNumber(val) {
                     let num = val.toString().replace(/\D/g, '');
@@ -1393,13 +1411,14 @@
                         if(un && !this.units.includes(un)) this.units.push(un);
                     }
 
+                    const formattedImg = this.formatDriveImageUrl(this.productForm.image);
                     let prodPayload;
                     if(this.productForm.id) {
                         const idx = this.products.findIndex(p => p.id === this.productForm.id);
                         if(idx !== -1) {
                             this.products[idx] = {
                                 ...this.products[idx],
-                                name, price, cost, category: cat, unit: un, image: this.productForm.image
+                                name, price, cost, category: cat, unit: un, image: formattedImg
                             };
                             prodPayload = this.products[idx];
                         }
@@ -1408,7 +1427,7 @@
                         prodPayload = {
                             id: Date.now(),
                             name, price, cost, category: cat, unit: un || 'botol', stock: 0,
-                            color: this.productForm.color, icon: this.productForm.icon, image: this.productForm.image
+                            color: this.productForm.color, icon: this.productForm.icon, image: formattedImg
                         };
                         this.products.push(prodPayload);
                         this.showToast('Produk baru ditambahkan');
