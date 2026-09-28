@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mintol-pos-v2';
+const CACHE_NAME = 'mintol-pos-v3';
 const assetsToCache = [
   '/',
   '/index.html',
